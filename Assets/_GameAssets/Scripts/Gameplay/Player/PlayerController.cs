@@ -1,3 +1,4 @@
+using NUnit.Framework;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
@@ -18,8 +19,10 @@ public class PlayerController : MonoBehaviour
     [Header("Jump Settings")]
     [SerializeField] private KeyCode _jumpKey;
     [SerializeField] private float _jumpForce;
+    [SerializeField] private float _airMultiplier;
     [SerializeField] private bool _canJump;
     [SerializeField] private float _jumpCooldown;
+    [SerializeField] private float _airDrag;
 
     [Header("Ground Check Settings")]
     [SerializeField] private float _playerHeight;
@@ -31,22 +34,26 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float _slideMultiplier;
     [SerializeField] private float _slideDrag; //sürtünme
 
+    private StateController _stateController;
+
     private void Awake()
     {
         _playerRigidbody = GetComponent<Rigidbody>();
         _playerRigidbody.freezeRotation = true;
+        _stateController = GetComponent<StateController>();
     }
 
     private void Update()
     {
         setInputs();
+        SetStates();
         SetPlayerDrag();
         LimitPlayerSpeed();
     }
 
     private void FixedUpdate()
     {
-        setPlayerMovement();
+        SetPlayerMovement();
     }
 
     private void setInputs()
@@ -70,23 +77,57 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void setPlayerMovement()
+    private void SetStates()
+    {
+        var movementDirection = getMovementDirection();
+        var isGrounded = IsGrounded();
+        var isSliding = IsSliding();
+        var currentState = _stateController.GetCurrentState();
+
+        var newState = currentState switch
+        {
+            _ when movementDirection == Vector3.zero && isGrounded && !isSliding => PlayerState.Idle,
+            _ when movementDirection != Vector3.zero && isGrounded && !isSliding => PlayerState.Move,
+            _ when movementDirection != Vector3.zero && isGrounded && isSliding => PlayerState.Slide,
+            _ when movementDirection == Vector3.zero && isGrounded && isSliding => PlayerState.SlideIdle,
+            _ when !_canJump && !isGrounded => PlayerState.Jump,
+            _ => currentState
+        };
+
+        if(newState != currentState)
+        {
+            _stateController.ChangeState(newState); 
+        }
+    }
+
+    private void SetPlayerMovement()
     {
         _movementDirection = _orientationTransform.forward * _verticalInput + 
         _orientationTransform.right * _horizontalInput;
 
-        if(_isSliding)
+        float forceMultiplier = _stateController.GetCurrentState() switch
         {
-            _playerRigidbody.AddForce(_movementDirection.normalized * _MovementSpeed * _slideMultiplier, ForceMode.Force);
-        }
-        else
-        {
-            _playerRigidbody.AddForce(_movementDirection.normalized * _MovementSpeed, ForceMode.Force);
-        }
+            PlayerState.Move => 1f,
+            PlayerState.Slide => _slideMultiplier,
+            PlayerState.Jump => _airMultiplier,
+            _ => 1f
+            
+        };
+
+        _playerRigidbody.AddForce(_movementDirection.normalized * _MovementSpeed * forceMultiplier, ForceMode.Force);
     }
 
         private void SetPlayerDrag()
     {
+
+        _playerRigidbody.linearDamping = _stateController.GetCurrentState() switch
+        {
+            PlayerState.Move => _groundDrag,
+            PlayerState.Slide => _slideDrag,
+            PlayerState.Jump => _airDrag,
+            _ => _playerRigidbody.linearDamping
+            
+        };
         if(_isSliding)
         {
             _playerRigidbody.linearDamping = _slideDrag;
@@ -123,6 +164,16 @@ public class PlayerController : MonoBehaviour
     private bool IsGrounded()
     {
         return Physics.Raycast(transform.position, Vector3.down, _playerHeight * 0.5f + 0.2f, _groundLayer);
+    }
+
+    private Vector3 getMovementDirection()
+    {
+        return _movementDirection.normalized;
+    }
+
+    private bool IsSliding()
+    {
+        return _isSliding;
     }
 }
 
