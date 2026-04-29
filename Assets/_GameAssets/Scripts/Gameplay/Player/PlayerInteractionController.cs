@@ -2,22 +2,26 @@ using UnityEngine;
 
 public class PlayerInteractionController : MonoBehaviour
 {
+
+    private PlayerController _playerController;
+
+    void Awake()
+    {
+        _playerController = GetComponent<PlayerController>();
+    }
     private void OnTriggerEnter(Collider other)
     {
-        if(other.CompareTag(Consts.WheatTypes.GOLD_WHEAT))
+        if(other.gameObject.TryGetComponent<ICollectable>(out var collectable))
         {
-            Debug.Log("Gold Wheat Collected!");
-            other.gameObject?.GetComponent<GoldWheatCollectable>().Collect();
+            collectable.Collect();
         }
-                if(other.CompareTag(Consts.WheatTypes.HOLY_WHEAT))
+    }
+
+    private void OnCollisionEnter(Collision other)
+    {
+        if(other.gameObject.TryGetComponent<IBoostables>(out var boostables))
         {
-            Debug.Log("Holy Wheat Collected!");
-            other.gameObject?.GetComponent<HolyWheatCollectable>().Collect();
-        }
-                if(other.CompareTag(Consts.WheatTypes.ROTTEN_WHEAT))
-        {
-            Debug.Log("Rotten Wheat Collected!");
-            other.gameObject?.GetComponent<RottenWheatCollectable>().Collect();
+            boostables.Boost(_playerController);
         }
     }
 }
