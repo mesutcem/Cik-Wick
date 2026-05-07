@@ -1,3 +1,4 @@
+using System;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -7,6 +8,7 @@ public class PlayerController : MonoBehaviour
     private float _horizontalInput, _verticalInput;
     private Vector3 _movementDirection;
 
+    public event Action<PlayerState> OnPlayerStateChanged;
     private bool _isSliding;
 
     [Header("Transform")]
@@ -102,6 +104,7 @@ public class PlayerController : MonoBehaviour
         if(newState != currentState)
         {
             _stateController.ChangeState(newState); 
+            OnPlayerStateChanged?.Invoke(newState);
         }
     }
 
