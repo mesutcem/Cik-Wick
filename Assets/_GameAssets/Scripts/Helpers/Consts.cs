@@ -1,5 +1,9 @@
 public class Consts
 {
+    public struct GameSceneNames
+    {
+        public const string GAME_SCENE = "GameScene";
+    }
     public struct WheatTypes
     {
         public const string GOLD_WHEAT = "GoldWheat";
