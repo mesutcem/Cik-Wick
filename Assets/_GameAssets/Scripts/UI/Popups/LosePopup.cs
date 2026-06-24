@@ -11,7 +11,7 @@ public class LosePopup : MonoBehaviour
 [SerializeField] private TMP_Text _timerText;
 [SerializeField] private TimerUI _timerUI;
 
-    void OnEnable()
+    void OnEnable() 
     {
         _timerText.text = _timerUI.GetFinalTime();
         _tryAgainButton.onClick.AddListener(OnTryAgainButtonClicked);
